@@ -1,5 +1,5 @@
-# .github/workflows/update-readme.yml
-name: Update README
+# .github/workflows/update-versions-and-readme.yml
+name: Update Versions and README
 
 on:
   workflow_dispatch:
@@ -7,19 +7,23 @@ on:
     - cron: "*/10 * * * *"
 
 jobs:
-  update-readme:
+  update:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fetch latest versions from GitHub
-        id: fetch_versions
+      - name: Fetch latest versions.json
         run: |
-          LINUX_STABLE=$(curl -s https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json | jq -r '.linux.stable')
-          LINUX_PREVIEW=$(curl -s https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json | jq -r '.linux.preview')
-          WINDOWS_STABLE=$(curl -s https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json | jq -r '.windows.stable')
-          WINDOWS_PREVIEW=$(curl -s https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json | jq -r '.windows.preview')
+          curl -s https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json -o versions.json
+
+      - name: Extract latest versions
+        id: extract_versions
+        run: |
+          LINUX_STABLE=$(jq -r '.linux.stable' versions.json)
+          LINUX_PREVIEW=$(jq -r '.linux.preview' versions.json)
+          WINDOWS_STABLE=$(jq -r '.windows.stable' versions.json)
+          WINDOWS_PREVIEW=$(jq -r '.windows.preview' versions.json)
 
           echo "LINUX_STABLE=$LINUX_STABLE" >> $GITHUB_ENV
           echo "LINUX_PREVIEW=$LINUX_PREVIEW" >> $GITHUB_ENV
@@ -35,4 +39,4 @@ jobs:
         uses: EndBug/add-and-commit@v9
         with:
           default_author: github_actions
-          message: "Update README with latest BDS versions"
+          message: "Update versions.json and README with latest BDS versions"
