@@ -1,30 +1,38 @@
-name: Scrape
+# .github/workflows/update-readme.yml
+name: Update README
+
 on:
   workflow_dispatch:
   schedule:
     - cron: "*/10 * * * *"
+
 jobs:
-  Perform-Fetch:
-    outputs:
-      LATEST_LINUX_VERSION: ${{ steps.fetch.outputs.latest_linux_version }}
-      LATEST_PREVIEW_VERSION: ${{ steps.fetch.outputs.latest_linux_preview_version }}
-      LATEST_WINDOWS_VERSION: ${{ steps.fetch.outputs.latest_windows_version }}
-      TRIGGER_LINUX_STABLE_BUILD: ${{ steps.fetch.outputs.trigger_linux_stable_build }}
-      TRIGGER_LINUX_PREVIEW_BUILD: ${{ steps.fetch.outputs.trigger_linux_preview_build }}
+  update-readme:
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Perform fetch
-        id: fetch
-        run: ./fetch.sh
-        env:
-          LINUX_MANIFEST_URL: ${{ secrets.LINUX_MANIFEST_URL }}
-          WINDOWS_MANIFEST_URL: ${{ secrets.WINDOWS_MANIFEST_URL }}
-          LINUX_PREVIEW_MANIFEST_URL: ${{ secrets.LINUX_PREVIEW_MANIFEST_URL }}
-          WINDOWS_PREVIEW_MANIFEST_URL: ${{ secrets.WINDOWS_PREVIEW_MANIFEST_URL }}
-      - name: Try commit
+
+      - name: Fetch latest versions from GitHub
+        id: fetch_versions
+        run: |
+          LINUX_STABLE=$(curl -s https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json | jq -r '.linux.stable')
+          LINUX_PREVIEW=$(curl -s https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json | jq -r '.linux.preview')
+          WINDOWS_STABLE=$(curl -s https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json | jq -r '.windows.stable')
+          WINDOWS_PREVIEW=$(curl -s https://raw.githubusercontent.com/Bedrock-OSS/BDS-Versions/main/versions.json | jq -r '.windows.preview')
+
+          echo "LINUX_STABLE=$LINUX_STABLE" >> $GITHUB_ENV
+          echo "LINUX_PREVIEW=$LINUX_PREVIEW" >> $GITHUB_ENV
+          echo "WINDOWS_STABLE=$WINDOWS_STABLE" >> $GITHUB_ENV
+          echo "WINDOWS_PREVIEW=$WINDOWS_PREVIEW" >> $GITHUB_ENV
+
+      - name: Update README
+        run: |
+          chmod +x readme.sh
+          ./readme.sh "$LINUX_STABLE" "$WINDOWS_STABLE" "$LINUX_PREVIEW" "$WINDOWS_PREVIEW"
+
+      - name: Commit and push changes
         uses: EndBug/add-and-commit@v9
         with:
           default_author: github_actions
-          message: "Updated versions"
+          message: "Update README with latest BDS versions"
